@@ -12,6 +12,7 @@ from .schemas import (
     ClientReviewAnalysis,
     PartnershipMeetingAnalysis,
     MetaAdsReport,
+    ContentIntelligenceReport,
 )
 
 
@@ -76,3 +77,9 @@ class SBITISState(TypedDict):
     # ── Node 6: Output Writer ─────────────────────────────────────────────────
     report_written: bool
     report_sheet_url: str
+
+    # ── Node 7: Content Intelligence ─────────────────────────────────────────
+    content_intelligence_report: Optional[ContentIntelligenceReport]
+
+    # ── Node 8: Content Calendar Writer ──────────────────────────────────────
+    content_written: bool

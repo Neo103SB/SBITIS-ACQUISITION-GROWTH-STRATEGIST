@@ -5,11 +5,13 @@ Graph structure:
   START
     → kb_ingestion              (sync Drive SOPs/frameworks → ChromaDB — optional)
     → fireflies_reader          (fetch + classify transcripts)
-    → call_analysts             (analyze each call by type)  ┐ fan-out
-    → data_aggregator           (Meta Ads + Sheets + GHL)    ┘ concurrent
+    → call_analysts       ┐ fan-out (concurrent)
+    → data_aggregator     ┘
     → langsmith_storage         (persist analyses to datasets)
-    → strategist                (generate CEO intelligence report)
-    → output_writer             (write to Google Sheets)
+    → strategist          ┐ fan-out (concurrent)
+    → content_intelligence┘
+    → output_writer        ┐ fan-out (concurrent)
+    → content_writer       ┘
   END
 """
 
@@ -26,6 +28,8 @@ from .nodes.data_aggregator import data_aggregator_node
 from .nodes.langsmith_storage import langsmith_storage_node
 from .nodes.strategist import strategist_node
 from .nodes.output_writer import output_writer_node
+from .nodes.content_intelligence import content_intelligence_node
+from .nodes.content_writer import content_writer_node
 
 
 def build_graph() -> StateGraph:
@@ -40,28 +44,32 @@ def build_graph() -> StateGraph:
     builder.add_node("data_aggregator", data_aggregator_node)
     builder.add_node("langsmith_storage", langsmith_storage_node)
     builder.add_node("strategist", strategist_node)
+    builder.add_node("content_intelligence", content_intelligence_node)
     builder.add_node("output_writer", output_writer_node)
+    builder.add_node("content_writer", content_writer_node)
 
     # ── Define edges ──────────────────────────────────────────────────────────
-    # KB ingestion runs first (skips gracefully if not configured)
     builder.set_entry_point("kb_ingestion")
     builder.add_edge("kb_ingestion", "fireflies_reader")
 
-    # After reading transcripts: fan-out to call analysts AND data aggregator
+    # Fan-out: call analysts + data aggregator run concurrently
     builder.add_edge("fireflies_reader", "call_analysts")
     builder.add_edge("fireflies_reader", "data_aggregator")
 
-    # Both branches must complete before storage
+    # Both must complete before storage
     builder.add_edge("call_analysts", "langsmith_storage")
     builder.add_edge("data_aggregator", "langsmith_storage")
 
-    # After storage → generate strategic report
+    # Fan-out: strategist + content intelligence run concurrently from same data
     builder.add_edge("langsmith_storage", "strategist")
+    builder.add_edge("langsmith_storage", "content_intelligence")
 
-    # After strategy → write output
+    # Both outputs write concurrently to their respective Sheet tabs
     builder.add_edge("strategist", "output_writer")
+    builder.add_edge("content_intelligence", "content_writer")
 
     builder.add_edge("output_writer", END)
+    builder.add_edge("content_writer", END)
 
     return builder.compile()
 
@@ -89,6 +97,8 @@ def create_initial_state(run_date: str | None = None) -> SBITISState:
         strategic_report="",
         report_written=False,
         report_sheet_url="",
+        content_intelligence_report=None,
+        content_written=False,
     )
 
 
