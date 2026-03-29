@@ -31,11 +31,15 @@ def get_llm():
         )
 
 
-def safe_json_parse(text: str) -> dict:
+def safe_json_parse(text: str) -> dict | None:
     """
     Robustly extract and parse a JSON object from LLM output.
     Handles markdown code blocks, trailing commas, etc.
+    Returns None if parsing fails or text is empty.
     """
+    if not text or not text.strip():
+        return None
+
     # Strip markdown code fences
     text = re.sub(r"```(?:json)?\s*", "", text).strip().rstrip("```").strip()
 
@@ -43,15 +47,18 @@ def safe_json_parse(text: str) -> dict:
     match = re.search(r"\{.*\}", text, re.DOTALL)
     if match:
         text = match.group(0)
+    elif not text.strip():
+        return None
 
     # Remove trailing commas before closing braces/brackets (common LLM error)
     text = re.sub(r",\s*([\}\]])", r"\1", text)
 
     try:
-        return json.loads(text)
+        result = json.loads(text)
+        return result if result else None
     except json.JSONDecodeError as e:
         log.warning("json_parse_failed", error=str(e), text_snippet=text[:200])
-        return {}
+        return None
 
 
 def build_analysis_prompt(system_prompt: str, transcript: str, summary: str) -> str:

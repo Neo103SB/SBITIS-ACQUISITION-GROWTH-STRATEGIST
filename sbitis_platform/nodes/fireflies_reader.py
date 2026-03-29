@@ -30,7 +30,7 @@ TITLE_PATTERNS: list[tuple[re.Pattern, CallType]] = [
     # Strategy / Sales call — client-facing
     (re.compile(r"\bstrategy\s+call\b|appel\s+strat[eé]g|closing\s+call|sales\s+call", re.I), CallType.STRATEGY_CALL),
     # Appointment setting
-    (re.compile(r"\bappointment\b|\bappt\b|\bqualif\b|\bdiscovery\b|\bSDR\b", re.I), CallType.APPOINTMENT_SETTING),
+    (re.compile(r"\bappointment\b|\bappt\b|\bqualif\b|\bdiscovery\b|\bSDR\b|\bconfirmation\b|\bconfirm\s+appel\b", re.I), CallType.APPOINTMENT_SETTING),
     # Sales training / call review
     (re.compile(r"\btraining\b|\bcall\s+review\b|\bcoaching\b|\broleplay\b|\borientation\s+vente", re.I), CallType.SALES_TRAINING),
     # Leadership / board
@@ -65,7 +65,11 @@ def _heuristic_classify(transcript: dict) -> tuple[CallType | None, float]:
 
     # Participant-based heuristics
     # If ALL participants are internal → internal meeting
-    external_participants = participants_lower - INTERNAL_NAMES
+    # Match by token so "Hamza SBITI" matches {"hamza", "sbiti"} in INTERNAL_NAMES
+    def _is_internal(name: str) -> bool:
+        return any(token in INTERNAL_NAMES for token in name.lower().split())
+
+    external_participants = {p for p in participants_lower if not _is_internal(p)}
     all_internal = len(external_participants) == 0 and len(participants_lower) > 0
 
     if all_internal:
