@@ -6,8 +6,10 @@ import structlog
 from ..llm_helpers import get_llm, safe_json_parse, build_analysis_prompt
 from ...schemas.call_classification import ClassifiedCall
 from ...schemas.sales_training import SalesTrainingAnalysis, CoachingPoint, ActionPoint
+from ...knowledge_base.retriever import KnowledgeRetriever
 
 log = structlog.get_logger(__name__)
+_kb = KnowledgeRetriever()
 
 _SYSTEM_PROMPT = """You are analyzing an internal SBITIS ACQUISITION sales training or call review session.
 
@@ -49,8 +51,11 @@ Be extremely specific. Quote exact phrases from the transcript as evidence."""
 def analyze_sales_training(call: ClassifiedCall) -> SalesTrainingAnalysis | None:
     log.info("analyst.training.start", file_id=call.file_id)
     try:
+        kb_context = _kb.get_training_context()
+        kb_block = f"\n\n{kb_context}\n\n" if kb_context else ""
         prompt = (
             f"session_id: {call.file_id}\nsession_date: {call.call_date or 'unknown'}\n\n"
+            + kb_block
             + build_analysis_prompt(_SYSTEM_PROMPT, call.raw_transcript, call.fireflies_summary)
         )
         llm = get_llm()

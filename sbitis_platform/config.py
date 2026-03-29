@@ -75,6 +75,20 @@ class Config:
     GHL_BASE_URL: str = "https://services.leadconnectorhq.com"
 
     # ── General ───────────────────────────────────────────────────────────────
+    # ── Knowledge Base ────────────────────────────────────────────────────────
+    # Comma-separated Google Drive folder IDs to index into the KB
+    # Get a folder ID from the Drive URL: drive.google.com/drive/folders/FOLDER_ID
+    KNOWLEDGE_BASE_FOLDER_IDS: list[str] = [
+        fid.strip()
+        for fid in os.getenv("KB_FOLDER_IDS", "").split(",")
+        if fid.strip()
+    ]
+    # Local path for the persistent ChromaDB vector store
+    KB_STORE_PATH: str = os.getenv("KB_STORE_PATH", "./knowledge_base_store")
+    # Skip KB ingestion entirely (useful in pure dry-run or offline mode)
+    KB_ENABLED: bool = os.getenv("KB_ENABLED", "true").lower() == "true"
+
+    # ── General ───────────────────────────────────────────────────────────────
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
     DRY_RUN: bool = os.getenv("DRY_RUN", "false").lower() == "true"
     # When True, skip writes to sheets and LangSmith (for testing)

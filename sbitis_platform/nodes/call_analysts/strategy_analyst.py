@@ -9,8 +9,10 @@ import structlog
 from ..llm_helpers import get_llm, safe_json_parse, build_analysis_prompt
 from ...schemas.call_classification import ClassifiedCall
 from ...schemas.strategy_calls import StrategyCallAnalysis, ProspectProfile, KeyMoment
+from ...knowledge_base.retriever import KnowledgeRetriever
 
 log = structlog.get_logger(__name__)
+_kb = KnowledgeRetriever()
 
 _SYSTEM_PROMPT = """You are an elite sales coach and call analyst for SBITIS ACQUISITION, a Moroccan digital marketing agency.
 
@@ -59,13 +61,20 @@ def analyze_strategy_call(call: ClassifiedCall) -> StrategyCallAnalysis | None:
     """Analyze a single strategy call and return the structured analysis."""
     log.info("analyst.strategy.start", file_id=call.file_id)
     try:
-        prompt = build_analysis_prompt(
+        # Pull relevant SOPs and frameworks from the knowledge base
+        kb_context = _kb.get_strategy_call_context()
+
+        base_prompt = build_analysis_prompt(
             system_prompt=_SYSTEM_PROMPT,
             transcript=call.raw_transcript,
             summary=call.fireflies_summary,
         )
-        # Inject file_id into the prompt context
-        prompt = f"file_id: {call.file_id}\ncall_date: {call.call_date or 'unknown'}\n\n" + prompt
+        kb_block = f"\n\n{kb_context}\n\n" if kb_context else ""
+        prompt = (
+            f"file_id: {call.file_id}\ncall_date: {call.call_date or 'unknown'}\n\n"
+            + kb_block
+            + base_prompt
+        )
 
         llm = get_llm()
         response = llm.invoke(prompt)

@@ -12,7 +12,10 @@ from datetime import datetime
 from ..state import SBITISState
 from ..config import config
 from ..integrations.langsmith_client import LangSmithStorage
+from ..knowledge_base.retriever import KnowledgeRetriever
 from .llm_helpers import get_llm
+
+_kb = KnowledgeRetriever()
 
 log = structlog.get_logger(__name__)
 
@@ -204,6 +207,14 @@ def _format_context(state: SBITISState) -> str:
                 parts.append(f"  [{t.session_date}] {t.session_type} — Patterns: {patterns}")
             except Exception:
                 pass
+
+    # ── Knowledge Base Context ───────────────────────────────────────────────
+    try:
+        kb_context = _kb.get_strategist_context()
+        if kb_context:
+            parts.append(f"\n## KNOWLEDGE BASE (SOPs & FRAMEWORKS)\n{kb_context}")
+    except Exception as e:
+        log.warning("strategist.kb_context_failed", error=str(e))
 
     return "\n".join(parts)
 

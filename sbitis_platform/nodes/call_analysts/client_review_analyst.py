@@ -8,8 +8,10 @@ import structlog
 from ..llm_helpers import get_llm, safe_json_parse, build_analysis_prompt
 from ...schemas.call_classification import ClassifiedCall
 from ...schemas.client_review import ClientReviewAnalysis, ResultAchieved, ContentAngle
+from ...knowledge_base.retriever import KnowledgeRetriever
 
 log = structlog.get_logger(__name__)
+_kb = KnowledgeRetriever()
 
 _SYSTEM_PROMPT = """You are analyzing a client review or coaching session for SBITIS ACQUISITION.
 These are goldmines for: content angles, voice-of-customer language, testimonials, and positioning insights.
@@ -59,8 +61,11 @@ For client_language_patterns: capture the EXACT words the client uses — this i
 def analyze_client_review(call: ClassifiedCall) -> ClientReviewAnalysis | None:
     log.info("analyst.client_review.start", file_id=call.file_id)
     try:
+        kb_context = _kb.get_content_strategy_context()
+        kb_block = f"\n\n{kb_context}\n\n" if kb_context else ""
         prompt = (
             f"session_id: {call.file_id}\nsession_date: {call.call_date or 'unknown'}\n\n"
+            + kb_block
             + build_analysis_prompt(_SYSTEM_PROMPT, call.raw_transcript, call.fireflies_summary)
         )
         llm = get_llm()
