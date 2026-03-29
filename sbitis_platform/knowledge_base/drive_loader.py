@@ -43,6 +43,15 @@ _VIDEO_MIME_TYPES = {
 
 # Folder category tags (matched against folder name)
 _CATEGORY_HINTS = {
+    # ── Agency Brain — always-on context, highest priority ──────────────────
+    "brain": "agency_brain",
+    "vision": "agency_brain",
+    "positioning": "agency_brain",
+    "philosophy": "agency_brain",
+    "manifesto": "agency_brain",
+    "coach transcript": "agency_brain",
+    "coach transcripts": "agency_brain",
+    # ── Standard KB categories ───────────────────────────────────────────────
     "sop": "SOP",
     "standard operating": "SOP",
     "sales framework": "sales_framework",

@@ -164,6 +164,48 @@ class KnowledgeRetriever:
 
         return "\n".join(lines) if lines else ""
 
+    def get_agency_brain(self, max_chars: int = 8000) -> str:
+        """
+        Always-on Agency Brain context — injected into EVERY strategic LLM call.
+
+        Unlike other retrieval methods (which are semantic/query-based), this
+        returns ALL documents in the `agency_brain` category unconditionally.
+        These docs define how the model should THINK about SBITIS: vision,
+        positioning, DFY philosophy, Hamza's brand, coach frameworks.
+
+        max_chars: cap to avoid overflowing the context window (default 8k chars).
+        """
+        if self._store.count() == 0:
+            return ""
+
+        # Fetch all agency_brain docs — no similarity threshold, no query
+        results = self._store.query(
+            "SBITIS agency vision positioning DFY philosophy",
+            n_results=20,
+            category_filter="agency_brain",
+        )
+
+        if not results:
+            return ""
+
+        lines = [
+            "╔══════════════════════════════════════════════════════════════╗",
+            "║               SBITIS AGENCY BRAIN — ALWAYS ON               ║",
+            "║  This is the core identity, philosophy, and positioning of   ║",
+            "║  SBITIS ACQUISITION. Reason through this lens at all times.  ║",
+            "╚══════════════════════════════════════════════════════════════╝",
+        ]
+
+        total_chars = sum(len(l) for l in lines)
+        for r in results:
+            block = f"\n### {r['title']}\n{r['content']}\n"
+            if total_chars + len(block) > max_chars:
+                break
+            lines.append(block)
+            total_chars += len(block)
+
+        return "\n".join(lines)
+
     def search(self, query: str, n: int = 5, category: str | None = None) -> str:
         """Free-form search — usable from CLI or ad-hoc queries."""
         results = self._store.query(query, n_results=n, category_filter=category)

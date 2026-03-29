@@ -123,6 +123,13 @@ def _build_content_context(state: SBITISState) -> str:
     """Compile all relevant intelligence for the content strategist."""
     parts: list[str] = []
     run_date = state.get("run_date", datetime.utcnow().strftime("%Y-%m-%d"))
+
+    # ── Agency Brain — always injected first ────────────────────────────────
+    brain = _kb.get_agency_brain()
+    if brain:
+        parts.append(brain)
+        parts.append("")
+
     parts.append(f"REPORT DATE: {run_date}")
 
     # ── Funnel data ───────────────────────────────────────────────────────────

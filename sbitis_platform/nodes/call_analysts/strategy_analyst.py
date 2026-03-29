@@ -61,6 +61,8 @@ def analyze_strategy_call(call: ClassifiedCall) -> StrategyCallAnalysis | None:
     """Analyze a single strategy call and return the structured analysis."""
     log.info("analyst.strategy.start", file_id=call.file_id)
     try:
+        # Agency Brain — always-on: shapes how the LLM evaluates the call
+        brain_context = _kb.get_agency_brain()
         # Pull relevant SOPs and frameworks from the knowledge base
         kb_context = _kb.get_strategy_call_context()
 
@@ -69,9 +71,11 @@ def analyze_strategy_call(call: ClassifiedCall) -> StrategyCallAnalysis | None:
             transcript=call.raw_transcript,
             summary=call.fireflies_summary,
         )
+        brain_block = f"\n\n{brain_context}\n\n" if brain_context else ""
         kb_block = f"\n\n{kb_context}\n\n" if kb_context else ""
         prompt = (
             f"file_id: {call.file_id}\ncall_date: {call.call_date or 'unknown'}\n\n"
+            + brain_block
             + kb_block
             + base_prompt
         )
